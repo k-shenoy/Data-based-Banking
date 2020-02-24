@@ -1,0 +1,359 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="utf-8">
+        <h1>{{title}}</h1>
+        <style>
+            h1, h2, h3, h4, h5 {
+                color: maroon;
+            }
+            body {
+                font: 12px Arial;
+                text-align: center;
+                margin: 2vw;
+                background-color: #FEF5E7;
+            }
+            .dot {
+                stroke: black;
+            }
+            button, select {
+                margin: 0.5vw;
+                width: 10vw;
+                font-size: 16px;
+                text-align: center;
+                color: coral;
+                background-color: #FEF5E7;
+                border-radius: 5px;
+                border-width: 3px;
+                border-color: coral;
+            }
+            input {
+                margin: 0.5vw;
+                width: 10vw;
+                font-size: 16px;
+                text-align: center;
+                color: coral;
+                background-color: #FEF5E7;
+                border-radius: 5px;
+                border-width: 3px;
+                border-color: coral;
+            }
+            #vizButton, #predButton {
+                width: 15vw;
+                font-size: 18px;
+                height: 3vw;
+                margin: auto;
+            }
+            .axis path, .axis line {
+                fill: none;
+                stroke: black;
+                stroke-width: 1;
+                shape-rendering: crispEdges;
+            }
+            #back {
+                display: none;
+                position: fixed;
+                top: 10px;
+                left: 10px;
+                width: 10vw;
+                height: 3vw;
+            }
+        </style>
+    </head>
+<body>
+    <button id = "vizButton">Visualize Your Data</button>
+    <button id = "predButton">Predict Your Data</button>
+    <button id = "back">Back</button>
+    <div id="prediction" style="display: none;">
+        <h2>What County Would You Like To Examine?</h2>
+        <select id = "predictOpt">
+            <option value="ATM">ATMs</option>
+            <option value="Bank">Banks</option>
+            <option value="Customers">Customers</option>
+        </select>
+        <input type = "text" id = "inputText">
+        <br>
+        <button id = "sendButton">Send</button>
+        <h4 id="result"></h4>
+    </div>
+    <div id="visualization" style="display: none;">
+    <select id = "charttype1">
+        <option value="hist">1-Variable</option>
+        <option value="scatter">2-Variable</option>
+    </select>
+    <br>
+    <select id = "1type1">
+        <option value="Population">Population</option>
+        <option value="MedIncome">Income</option>
+        <option value="Value">Housing Cost</option>
+        <option value="Numatms">C1 ATMs</option>
+        <option value="Numbanks">C1 Banks</option>
+        <option value="custCount">Customers</option>
+    </select>
+    <select id = "2type1" style="display: none;">
+        <option value="Population">Population</option>
+        <option value="MedIncome">Income</option>
+        <option value="Value">Housing Cost</option>
+        <option value="Numatms">C1 ATMs</option>
+        <option value="Numbanks">C1 Banks</option>
+        <option value="custCount">Customers</option>
+    </select>
+    <select id = "2type2" style="display: none;">
+        <option value="Population">Population</option>
+        <option value="MedIncome" selected>Income</option>
+        <option value="Value">Housing Cost</option>
+        <option value="Numatms">C1 ATMs</option>
+        <option value="Numbanks">C1 Banks</option>
+        <option value="custCount">Customers</option>
+    </select>
+    <br>
+    <div id='graphDiv'></div>
+    </div>
+
+<script src="https://code.jquery.com/jquery-2.1.4.min.js"></script>
+<script src="http://d3js.org/d3.v3.min.js"></script>
+<script src="/static/js/d3manager.js"></script>
+<script src="/static/js/lodash.js"></script>
+<script>
+    var graphData = {{ data.chart_data | safe }}
+    var margin = {top: 30, right: 50, bottom: 30, left: 50};
+    var svgWidth = 600;
+    var svgHeight = 270;
+    var graphWidth = svgWidth - margin.left - margin.right;
+    var graphHeight = svgHeight - margin.top - margin.bottom;
+    drawHisto($("#1type1").val());
+
+    function drawScatter(name1, name2) {
+        d3.select("svg").remove();
+        var values1 = arrayColumn(graphData, name1);
+        var values2 = arrayColumn(graphData, name2);
+        width = graphWidth;
+        height = graphHeight;
+
+        var xValue = function(d) { return d[name1]},
+            xScale = d3.scale.linear().range([0, width]),
+            xMap = function(d) { return xScale(xValue(d));},
+            xAxis = d3.svg.axis().scale(xScale).orient("bottom");
+
+        var yValue = function(d) { return d[name2]},
+            yScale = d3.scale.linear().range([height, 0]),
+            yMap = function(d) { return yScale(yValue(d));},
+            yAxis = d3.svg.axis().scale(yScale).orient("left");
+
+        var svg = d3.select("#graphDiv").append("svg")
+            .attr("width", width + margin.left + margin.right)
+            .attr("height", height + margin.top + margin.bottom)
+            .append("g")
+            .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+
+        xScale.domain([d3.min(values1)-1, d3.max(values1)+1]);
+        yScale.domain([d3.min(values2)-1, d3.max(values2)+1]);
+
+        //x-title
+        svg.append("g")
+            .attr("class", "x axis")
+            .attr("transform", "translate(0," + height + ")")
+            .call(xAxis)
+           .append("text")
+            .attr("class", "label")
+            .attr("x", width)
+            .attr("y", -6)
+            .style("text-anchor", "end")
+            .text(name1);
+
+        //y-title
+        svg.append("g")
+            .attr("class", "y axis")
+            .call(yAxis)
+           .append("text")
+            .attr("class", "label")
+            .attr("transform", "rotate(-90)")
+            .attr("y", 6)
+            .attr("dy", ".71em")
+            .style("text-anchor", "end")
+            .text(name2);
+
+        // draw dots
+        svg.selectAll(".dot")
+            .data(graphData)
+           .enter().append("circle")
+            .attr("class", "dot")
+            .attr("r", 3.5)
+            .attr("cx", xMap)
+            .attr("cy", yMap);
+    }
+
+    function drawHisto(name) {
+        d3.select("svg").remove();
+        var color = "pink";
+
+        var values = arrayColumn(graphData, name);
+
+        // A formatter for counts.
+        var formatCount = d3.format(",.0f");
+
+        //var margin = {top: 20, right: 30, bottom: 30, left: 30},
+            //width = 960 - margin.left - margin.right,
+            //height = 500 - margin.top - margin.bottom;
+
+        var max = d3.max(values);
+        var min = d3.min(values);
+        var x = d3.scale.linear()
+            .domain([min, max])
+            .range([0, graphWidth]);
+
+        // Generate a histogram using twenty uniformly-spaced bins.
+        var data = d3.layout.histogram()
+            .bins(x.ticks(20))
+            (values);
+
+        var yMax = d3.max(data, function(d){return d.length});
+        var yMin = d3.min(data, function(d){return d.length});
+        var colorScale = d3.scale.linear()
+            .domain([yMin, yMax])
+            .range([d3.rgb(color).darker(), d3.rgb(color).brighter()]);
+
+        var y = d3.scale.linear()
+            .domain([0, yMax])
+            .range([graphHeight, 0]);
+
+        var xAxis = d3.svg.axis()
+            .scale(x)
+            .orient("bottom");
+
+        var svg = d3.select("#graphDiv").append("svg")
+            .attr("width", graphWidth + margin.left + margin.right)
+            .attr("height", graphHeight + margin.top + margin.bottom)
+            .append("g")
+            .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+
+        var bar = svg.selectAll(".bar")
+            .data(data)
+            .enter().append("g")
+            .attr("class", "bar")
+            .attr("transform", function(d) { return "translate(" + x(d.x) + "," + y(d.y) + ")"; });
+
+        bar.append("rect")
+            .attr("x", 1)
+            .attr("width", (x(data[0].dx) - x(0)) - 1)
+            .attr("height", function(d) { return graphHeight - y(d.y); })
+            .attr("fill", function(d) { return colorScale(d.y) });
+
+        bar.append("text")
+            .attr("dy", ".75em")
+            .attr("y", -12)
+            .attr("x", (x(data[0].dx) - x(0)) / 2)
+            .attr("text-anchor", "middle")
+            .text(function(d) { return formatCount(d.y); });
+
+        svg.append("g")
+            .attr("class", "x axis")
+            .attr("transform", "translate(0," + graphHeight + ")")
+            .call(xAxis);
+    }
+    // define function
+    function drawLine() {
+        d3.select("svg").remove();
+        data = graphData;
+        var x = d3.scale.linear().range([0, graphWidth]);
+        var y = d3.scale.linear().range([graphHeight, 0]);
+        var xAxis = d3.svg.axis().scale(x)
+            .orient("bottom").ticks(5);
+        var yAxis = d3.svg.axis().scale(y)
+            .orient("left").ticks(5);
+        var indivLine = d3.svg.line()
+            .x(function(d) { return x(d.total); })
+            .y(function(d) { return y(d.indiv); });
+        var avgLine = d3.svg.line()
+            .x(function(d) { return x(d.total); })
+            .y(function(d) { return y(d.avg); });
+        var svg = d3.select("#graphDiv")
+            .append("svg")
+                .attr("width", svgWidth)
+                .attr("height", svgHeight)
+            .append("g")
+                .attr("transform",
+                "translate(" + margin.left + "," + margin.top + ")")
+        // For each row in the data, parse the date
+        // and use + to make sure data is numerical
+        data.forEach(function(d) {
+            d.High = +d.indiv;
+            d.Close = +d.avg;
+        });
+        // Scale the range of the data
+        x.domain(d3.extent(data, function(d) { return d.total; }));
+        y.domain([d3.min(data, function(d) {
+            return Math.min(d.High, d.Close) }),
+            d3.max(data, function(d) {
+            return Math.max(d.High, d.Close) })]);
+        // Add the highLine as a green line
+        svg.append("path")
+            .style("stroke", "green")
+            .style("fill", "none")
+            .attr("class", "line")
+            .attr("d", indivLine(data));
+        // Add the lowLine as a red dashed line
+        svg.append("path")
+            .style("stroke", "red")
+            .attr("d", avgLine(data));
+        // Add the X Axis
+        svg.append("g")
+            .attr("class", "x axis")
+            .attr("transform", "translate(0," + graphHeight + ")")
+            .call(xAxis);
+        // Add the Y Axis
+        svg.append("g")
+            .attr("class", "y axis")
+            .call(yAxis);
+        // Add the text for the "High" line
+        svg.append("text")
+            .attr("transform", "translate("+(graphWidth+3)+","+y(graphData[0].High)+")")
+            .attr("dy", ".35em")
+            .attr("text-anchor", "start")
+            .style("fill", "green")
+            .text("High");
+        // Add the text for the "Low" line
+        svg.append("text")
+            .attr("transform", "translate("+(graphWidth+3)+","+y(graphData[0].Close)+")")
+            .attr("dy", ".35em")
+            .attr("text-anchor", "start")
+            .style("fill", "red")
+            .text("Low");
+    };
+
+    function arrayColumn(arr, n) {
+        return arr.map(x=> x[n]);
+    }
+
+    function mergeArrayObjects(arr1,arr2){
+        return arr1.map((item,i)=>{
+            if(item.Candidate === arr2[i].Candidate){
+                //merging two objects
+                return Object.assign({},item,arr2[i])
+            }
+        })
+    }
+
+    function newFunc(d) {
+        if (value="indiv") {
+            return d.indiv;
+        }
+        if (value="avg") {
+            return d.avg;
+        }
+        if (value="pop") {
+            return d.pop;
+        }
+        if (value="hous") {
+            return d.hous;
+        }
+    }
+
+    function myFunc() {
+        console.log("1");
+        return "{{text}}";
+    }
+</script>
+<script src="/static/js/script2.js"></script>
+</body>
+</html>
